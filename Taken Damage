@@ -1,0 +1,253 @@
+// --- GODトークンのアクターIDを適宜入れてね ---
+const GOD_ACTOR_ID = "CVlv6QBjAO5jpl28";
+
+const main = async () => {
+    // アクターの取得
+    const actor = canvas.tokens.controlled[0]?.actor;
+    if (!actor) {
+        console.log("actorを取得できなかったため終了: ダメージ処理マクロ");
+        ui.notifications.error("トークンを選択してください。");
+        return;
+    }
+
+    // baseDamageの取得（scope.damageから取得）
+    const baseDamage = Number(scope.damage);
+    require(Number.isFinite(baseDamage), "damageの数字を入力してください");
+
+    // GODアクターの取得
+    const godActor = game.actors.get(GOD_ACTOR_ID);
+    check(godActor, "GODのactor_idを正しく入力してください");
+
+    const receiver = actor;
+    check(receiver, "キャラクターを選択してから再度実行してください");
+
+    console.log("受け手のダメージ反映処理を開始");
+
+    // 通常ダメージと特殊ダメージの割合を計算
+    const receiverNormalPercentage = calcNormalDamagePercentage(receiver);
+    const receiverSpecialPercentage = calcSpecialDamagePercentage(receiver);
+
+    console.log("godから倍率を取得");
+    const attackerNormalPercentage = godActor.system.attributes["normalDamagePercentage"].value;
+    const attackerSpecialPercentage = godActor.system.attributes["specialDamagePercentage"].value;
+
+    // 最終ダメージの計算
+    const normalRatio = (100 + attackerNormalPercentage - receiverNormalPercentage) / 100;
+    const specialRatio = (100 + attackerSpecialPercentage - receiverSpecialPercentage) / 100;
+    
+    // ratioが0以下の場合はその項目を0として計算
+    const dealDamage = baseDamage * (normalRatio > 0 ? normalRatio : 0) * (specialRatio > 0 ? specialRatio : 0);
+
+    sendMessage(
+        "受け手のダメージ反映処理終了" + "<br/>" +
+        "最終ダメージ(切り上げ) : " + dealDamage + "<br/>" + 
+        "攻撃者通常% : " + attackerNormalPercentage + "<br/>" +
+        "攻撃者特殊% : " + attackerSpecialPercentage + "<br/>" +
+        "受け手通常% : " + receiverNormalPercentage + "<br/>" +
+        "受け手特殊% : " + receiverSpecialPercentage
+    );
+
+    // ダメージは切り上げる
+    const ceiledDealDamage = Math.ceil(dealDamage);
+    applyDamage(receiver, ceiledDealDamage);
+
+    // 被ダメージ時の特定のデバフ処理
+    handleDebuffs(receiver, ceiledDealDamage);
+
+    console.log("最終ダメージ(切り上げ) : " + ceiledDealDamage);
+    console.log("attackerNormalPercentage : "  + attackerNormalPercentage);
+    console.log("attackerSpecialPercentage : " + attackerSpecialPercentage);
+    console.log("receiverNormalPercentage : "  + receiverNormalPercentage);
+    console.log("receiverSpecialPercentage : " + receiverSpecialPercentage);
+};
+
+// --- ダメージ適用関数 ---
+const applyDamage = (receiver, damage) => {
+    let hp = receiver.system.attributes.hp.value;
+    let barrier = receiver.system.attributes.barrier.value;
+    let constitution = receiver.system.attributes.constitution.value;
+    const isDoubleConstitution = getAttributeValue(receiver, "doubleconstitution", 0) === 1;
+
+    // バリアでダメージを吸収
+    if(barrier > 0) {
+        const absorbed = Math.min(barrier, damage);
+        barrier -= absorbed;
+        damage -= absorbed;
+    }
+    // 残りのダメージをHPから引く
+    if(damage > 0) {
+        hp -= damage;
+    }
+
+    // コンスタンシー（constitution）へのダメージ
+    if(isDoubleConstitution) {
+        constitution -= damage * 2;
+    } else {
+        constitution -= damage;
+    }
+
+    // HP、バリア、コンスタンシーを更新
+    receiver.update({
+        'system.attributes.hp.value': hp,
+        'system.attributes.barrier.value': barrier,
+        'system.attributes.constitution.value': Math.max(constitution, 0) // マイナスにならないように
+    });
+
+    console.log(`ダメージ適用: HP=${hp}, バリア=${barrier}, Constitution=${constitution}`);
+};
+
+// --- stacksinkの処理 ---
+const handleStackSink = (actor) => {
+    // stacksinkの値を取得
+    const beforeStack = getAttributeValue(actor, "stacksink", 0);
+
+    // stacksinkの値を1/2にして切り下げる
+    const halfStack = Math.floor(beforeStack / 2);
+
+    // stacksinkの値を更新
+    actor.update({
+        'system.attributes.stacksink.value': halfStack
+    });
+
+    console.log(`stacksink処理: before=${beforeStack}, after=${halfStack}`);
+};
+
+// --- 被ダメージ時のデバフ処理 ---
+const handleDebuffs = (actor, damage) => {
+    // 例として、特定のデバフ "沈潜" が存在する場合
+    const hasSinkDebuff = actor.effects.some(effect => effect.data.label === "沈潜");
+
+    if (hasSinkDebuff) {
+        // デバフに応じた処理をここに記述
+        const beforeStack = getAttributeValue(actor, "stacksink", 0);
+        const SanityDamage = beforeStack;
+        applySanityDamage(actor, SanityDamage);
+
+        // stacksinkの値を1/2にして切り下げる
+        const halfStack = Math.floor(beforeStack / 2);
+
+        // stacksinkの値を更新
+        actor.update({
+            'system.attributes.stacksink.value': halfStack
+        });
+
+        console.log(`stacksink処理: before=${beforeStack}, after=${halfStack}`);
+
+        sendMessage(`**${actor.name}** は「沈潜」のデバフにより、SANにダメージ **${Math.ceil(SanityDamage)}** を受けます。`);
+        console.log(`SANダメージ適用: ${Math.ceil(SanityDamage)}`);
+    }
+};
+
+// --- 追加ダメージ適用関数 ---
+const applySanityDamage = (receiver, damage) => {
+    let hp = receiver.system.attributes.hp.value;
+    let barrier = receiver.system.attributes.san.value;
+
+    // バリアでダメージを吸収
+    if(barrier > 0) {
+        const absorbed = Math.min(barrier, damage);
+        barrier -= absorbed;
+        damage -= absorbed;
+    }
+    // 残りのダメージをHPから引く
+    if(damage > 0) {
+        hp -= damage;
+    }
+
+    // HPとバリアを更新
+    receiver.update({
+        'system.attributes.hp.value': hp,
+        'system.attributes.san.value': barrier
+    });
+
+    console.log(`SANダメージ適用: HP=${hp}, SAN=${barrier}`);
+};
+
+// --- 通常ダメージ割合計算 ---
+const calcNormalDamagePercentage = (receiver) => {
+    let percentage = 0;
+
+    // 保護
+    const stackProtection = getAttributeValue(receiver, "stackProtection", 0);
+    // 脆弱
+    const stackVulnerable = getAttributeValue(receiver, "stackVulnerable", 0);
+
+    percentage += stackProtection * 10;
+    percentage -= stackVulnerable * 10;
+    console.log(`calcNormalDamagePercentage: ${percentage}%`);
+    return percentage;
+};
+
+// --- 特殊ダメージ割合計算 ---
+const calcSpecialDamagePercentage = (receiver) => {
+    let percentage = 0;
+
+    // 混乱 - constitutionが0以下の場合
+    const isConstitution = getAttributeValue(receiver, "constitution", 0) <= 0;
+    if (isConstitution) {
+        console.log("混乱状態: 特殊ダメージ倍率を -100% に設定");
+        return -100; // 混乱の場合はダメージ倍率を-100%に設定
+    }
+
+    // 耐性 - resist属性の値を取得
+    const resistance = getAttributeValue(receiver, "resist", 0);
+    percentage += resistance;
+    console.log(`calcSpecialDamagePercentage: ${percentage}%`);
+    return percentage;
+};
+
+// --- 属性値取得関数 ---
+const getAttributeValue = (actor, attribute_name, defaultValue = 0) => {
+    const attribute = actor.system.attributes[attribute_name];
+    if (attribute && attribute.value !== undefined && attribute.value !== null) {
+        console.log(`${actor.name}の${attribute_name}は${attribute.value}`);
+        return attribute.value;
+    } else {
+        console.log(`${actor.name}の${attribute_name}は定義されていません。デフォルト値 ${defaultValue} を使用します。`);
+        return defaultValue;
+    }
+};
+
+// --- チェック関数 ---
+const check = (condition, message = "IllegalStateException") => {
+    if(!condition) {
+        ChatMessage.create({
+            speaker: ChatMessage.getSpeaker({token: canvas.tokens.controlled[0]}),
+            content: message
+        });
+        throw new Error(message);
+    }
+};
+
+const checkNotNull = (condition, message = "IllegalStateException") => {
+    if(condition === null || condition === undefined) {
+        ChatMessage.create({
+            speaker: ChatMessage.getSpeaker({token: canvas.tokens.controlled[0]}),
+            content: message
+        });
+        throw new Error(message);
+    }
+};
+
+const requireCondition = (condition, message = "IllegalArgumentException") => {
+    if(!condition) {
+        ChatMessage.create({
+            speaker: ChatMessage.getSpeaker({token: canvas.tokens.controlled[0]}),
+            content: message
+        });
+        throw new Error(message);
+    }
+};
+
+// --- メッセージ送信関数 ---
+const sendMessage = (content) => {
+    ChatMessage.create({
+        content: content
+    });
+};
+
+// --- 追加のダメージ適用用関数名の修正 ---
+const require = requireCondition;
+
+// --- メイン関数の実行 ---
+main();

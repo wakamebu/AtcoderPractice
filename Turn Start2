@@ -1,0 +1,397 @@
+//更新履歴
+//4.29 作成
+//9.07 applyFrenzyWhenTurnStart(characterList);以下追加
+
+const applyhitanWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes?.checkhitan?.value > 0 && x.entity.system.attributes.stackProtection.value <= 1)
+    .map(x => {
+        console.log(x.entity.name + "に対して悲嘆による保護付与")
+        const beforeStack = x.entity.system.attributes.stackProtection.value;
+        const AddStack = x.entity.system.attributes.stackProtectionnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackProtection', 1);
+        return x
+    })
+}
+
+const applyFrenzyWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes?.stackfrenzy?.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して狂乱処理")
+        const addStack = x.entity.system.attributes.stackfrenzy.value;
+        const beforeStack = x.entity.system.attributes.stackDamageUp.value;
+        const beforeVulnerable = x.entity.system.attributes.stackVulnerable.value;
+        x.entity.modifyTokenAttribute('attributes.stackDamageUp', addStack + beforeStack);
+        x.entity.modifyTokenAttribute('attributes.stackVulnerable', addStack + beforeVulnerable);
+        return x
+    })
+}
+
+const applyWitchStart = (characterList) => {
+    // List<gActor>
+    return characterList
+        .filter(x => x.entity.system.attributes.stackwitch1.value > 0)
+        .map(x => {
+            if (x.entity.system.attributes.stackwitch1.value > 0) {
+                console.log(x.entity.name + "に対して呪詛処理");
+                const beforeStack = x.entity.system.attributes.stackwitch1.value;
+                const healAmount = beforeStack * 0.02 * x.entity.system.attributes.hp.value; 
+                applyDamage(x, healAmount); 
+            }
+            return x;
+        });
+};
+
+
+const applyRegenWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackregen.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して再生処理")
+        const beforeStack = x.entity.system.attributes.stackregen.value;
+        const healAmount = beforeStack * 0.05 * x.entity.system.attributes.hp.max;
+        applyHeal(x, healAmount);
+        return x
+    })
+}
+
+//const eraseBarrierWhenTurnEnd = (characterList) => {
+    // List<gActor>
+//    return characterList
+//    .filter(x => x.entity.system.attributes.barrier.value > 0 )
+//    .map(x => {
+//        console.log(x.entity.name + "に対してバリア削除処理")
+//        x.entity.modifyTokenAttribute('attributes.barrier', 0);
+//        return x
+//    })
+//}
+
+
+const applyBindWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackbindnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して束縛付与")
+        const beforeStack = x.entity.system.attributes.stackbind.value;
+        const AddStack = x.entity.system.attributes.stackbindnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackbind', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackbindnext' , 0 )
+        return x
+    })
+}
+
+const applyRegenPlusWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackregennext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して再生付与")
+        const beforeStack = x.entity.system.attributes.stackregen.value;
+        const AddStack = x.entity.system.attributes.stackregennext.value;
+        x.entity.modifyTokenAttribute('attributes.stackregen', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackregennext' , 0 )
+        return x
+    })
+}
+
+
+const applyBleedingWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackBleedingnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して出血付与")
+        const beforeStack = x.entity.system.attributes.stackBleeding.value;
+        const AddStack = x.entity.system.attributes.stackBleedingnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackBleeding', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackBleedingnext' , 0 )
+        return x
+    })
+}
+
+
+const applyPoisonWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackPoisonnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して毒付与")
+        const beforeStack = x.entity.system.attributes.stackPoison.value;
+        const AddStack = x.entity.system.attributes.stackPoisonnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackPoison', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackPoisonnext' , 0 )
+        return x
+    })
+}
+
+
+const applyBurnedWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackBurnednext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対してやけど付与")
+        const beforeStack = x.entity.system.attributes.stackBurned.value;
+        const AddStack = x.entity.system.attributes.stackBurnednext.value;
+
+        x.entity.modifyTokenAttribute('attributes.stackBurned', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackBurnednext' , 0 )
+        return x
+    })
+}
+
+
+
+const applyPowerUpWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackPowerUpnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対してパワー付与")
+        const beforeStack = x.entity.system.attributes.stackPowerUp.value;
+        const AddStack = x.entity.system.attributes.stackPowerUpnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackPowerUp', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackPowerUpnext', 0);
+        return x
+    })
+}
+
+
+
+const applyProtectionWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackProtectionnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して保護付与")
+        const beforeStack = x.entity.system.attributes.stackProtection.value;
+        const AddStack = x.entity.system.attributes.stackProtectionnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackProtection', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackProtectionnext', 0);
+        return x
+    })
+}
+
+
+const applyDamageUpWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackDamageUpnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対してダメージ上昇付与")
+        const beforeStack = x.entity.system.attributes.stackDamageUp.value;
+        const AddStack = x.entity.system.attributes.stackDamageUpnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackDamageUp', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackDamageUpnext', 0);
+        return x
+    })
+}
+
+
+const applyPowerDownWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackPowerDownnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して威力減少付与")
+        const beforeStack = x.entity.system.attributes.stackPowerDown.value;
+        const AddStack = x.entity.system.attributes.stackPowerDownnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackPowerDown', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackPowerDownnext', 0);
+        return x
+    })
+}
+
+
+const applyVulnerableWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackVulnerablenext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して脆弱付与")
+        const beforeStack = x.entity.system.attributes.stackVulnerable.value;
+        const AddStack = x.entity.system.attributes.stackVulnerablenext.value;
+        x.entity.modifyTokenAttribute('attributes.stackVulnerable', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackVulnerablenext', 0);
+        return x
+    })
+}
+
+
+const applyDamageDownWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackDamageDownnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対してダメージ減少付与")
+        const beforeStack = x.entity.system.attributes.stackDamageDown.value;
+        const AddStack = x.entity.system.attributes.stackDamageDownnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackDamageDown', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackDamageDownnext', 0);
+        return x
+    })
+}
+
+
+const applyFearWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackFearnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して恐怖付与")
+        const beforeStack = x.entity.system.attributes.stackFear.value;
+        const AddStack = x.entity.system.attributes.stackFearnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackFear', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackFearnext', 0);
+        return x
+    })
+}
+
+
+
+const applyParalysisWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackParalysisnext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して麻痺付与")
+        const beforeStack = x.entity.system.attributes.stackParalysis.value;
+        const AddStack = x.entity.system.attributes.stackParalysisnext.value;
+        x.entity.modifyTokenAttribute('attributes.stackParalysis', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackParalysisnext', 0);
+        return x
+    })
+}
+
+
+const applyPoiseWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stackpoisenext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して呼吸処理")
+        const beforeStack = x.entity.system.attributes.stackpoise.value;
+        const AddStack = x.entity.system.attributes.stackpoisenext.value;
+        x.entity.modifyTokenAttribute('attributes.stackpoise', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stackpoisenext', 0);
+        return x
+    })
+}
+
+
+const applyTremorWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stacktremornext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して振動処理")
+        const beforeStack = x.entity.system.attributes.stacktremor.value;
+        const AddStack = x.entity.system.attributes.stacktremornext.value;
+        x.entity.modifyTokenAttribute('attributes.stacktremor', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stacktremornext', 0);
+        return x
+    })
+}
+
+
+const applySinkWhenTurnStart = (characterList) => {
+    // List<gActor>
+    return characterList
+    .filter(x => x.entity.system.attributes.stacksinknext.value > 0 )
+    .map(x => {
+        console.log(x.entity.name + "に対して沈潜処理")
+        const beforeStack = x.entity.system.attributes.stacksink.value;
+        const AddStack = x.entity.system.attributes.stacksinknext.value;
+        x.entity.modifyTokenAttribute('attributes.stacksink', beforeStack + AddStack);
+        x.entity.modifyTokenAttribute('attributes.stacksinknext', 0);
+        return x
+    })
+}
+
+
+const getCharacterList = () => {
+    return canvas.tokens.controlAll()
+    .map(x => x.actor)
+    .filter(x => x.type === 'character')
+// とりあえず出血ステータスがあるかどうかでプレイヤーか見分けることにする
+    .filter(x => !!x.system.attributes.stackBleeding)
+}
+
+const applyDamage = (character, damage) => {
+    let hp = character.hp;
+    let barrier = character.barrier;
+
+    if (barrier > 0) {
+        const absorbed = Math.min(barrier, damage);
+        barrier -= absorbed;
+        damage -= absorbed;
+    }
+    if (damage > 0) {
+        hp -= damage;
+    }
+
+    // HPとバリアの反映
+    character.entity.modifyTokenAttribute('attributes.hp', hp);
+    character.entity.modifyTokenAttribute('attributes.barrier', barrier);
+
+    return character;
+};
+
+//再生用
+const applyHeal = (character, heal) => {
+  let hp = character.hp;
+  const maxhp = character.hp.max;
+
+  hp += heal;
+  if(hp > maxhp) {
+  hp = maxhp;
+  }
+
+  character.hp = hp;
+  return character;
+}
+
+const turnStart = () => {
+// List<gActor>
+    const characterList = getCharacterList().map(x => {return {
+        entity: x, 
+        hp: x.system.attributes.hp.value, 
+        barrier: x.system.attributes.barrier.value
+}});
+    
+    // 順不同のはず
+    applyBleedingWhenTurnStart(characterList);
+    applyBurnedWhenTurnStart(characterList);
+    applyPoisonWhenTurnStart(characterList);
+    applyPowerUpWhenTurnStart(characterList);
+    applyProtectionWhenTurnStart(characterList);
+    applyDamageUpWhenTurnStart(characterList);
+    applyDamageDownWhenTurnStart(characterList);
+    applyVulnerableWhenTurnStart(characterList);
+    applyPowerDownWhenTurnStart(characterList);
+    applyParalysisWhenTurnStart(characterList);
+    applyFearWhenTurnStart(characterList);
+    applyPoiseWhenTurnStart(characterList);
+    applyTremorWhenTurnStart(characterList);
+    applySinkWhenTurnStart(characterList);
+    applyBindWhenTurnStart(characterList);
+    applyRegenWhenTurnStart(characterList);
+    applyRegenPlusWhenTurnStart(characterList);
+    applyWitchStart(characterList);
+    applyFrenzyWhenTurnStart(characterList);
+    applyhitanWhenTurnStart(characterList);
+
+
+    // 更新系処理が非同期のため各状態異常処理でそれぞれ参照と更新を行うと、更新前の値を参照してきてしまい、最後の更新以外反映されない状態になる
+    characterList.map(x => {
+        const beforeHp = x.entity.system.attributes.hp.value;
+        x.entity.modifyTokenAttribute('attributes.hp', x.hp)
+    });
+}
+
+turnStart();

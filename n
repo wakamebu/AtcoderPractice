@@ -1,0 +1,27 @@
+if (!actor) {
+    console.log("actorを取得できなかったため終了: 朽ち果てる闇マクロ1");
+    return;
+}
+
+// 現在の stacksinsyoku 値を取得
+let currentstackSinsyoku = actor.system.attributes.stackSinsyoku.value;
+
+
+// HPとCONに与えるダメージを計算
+let hpDamage = currentstackSinsyoku;
+//let conDamage = currentstackSinsyoku*2;
+console.log("与えるダメージ: " + hpDamage);
+
+// 現在の HP 値を取得
+let currentHP = actor.system.attributes.hp.value;
+//let currentCon = actor.system.attributes.constitution.value;
+
+// 新しい HP 値を計算
+let newHP = currentHP - hpDamage;
+//let newCon = currentCon - conDamage;
+console.log("HP: " + newHP);
+//console.log("CON: " + newCon);
+
+// HPを更新
+actor.modifyTokenAttribute('attributes.hp', newHP);
+//actor.modifyTokenAttribute('attributes.constitution',newCon);

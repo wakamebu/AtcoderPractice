@@ -1,0 +1,24 @@
+  int j = s.size();
+  for(int i = 0; i < j; i++){
+    char N = s[i];
+    S.insert(N);
+  }
+
+  int res = 0;
+  rep(i,3){
+    char T = c[i];
+    if(i<2 && S.count(T)){
+      res++;
+      continue;
+    }
+    if(res == 2 && S.count(T)){
+      cout << "Yes" << endl; 
+      return 0;
+    }else if(T == 'x'){
+      cout << "Yes" << endl;
+      return 0;
+    }else{
+      cout << "No" << endl;
+      return 0;
+    }
+  }

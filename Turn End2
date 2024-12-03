@@ -1,0 +1,450 @@
+//更新履歴
+//4.26 呼吸・束縛・沈潜・振動・再生処理追加
+//4.26 出血処理 3/4繰り下げ→2/3繰り上げへ
+//6.12 点火処理を追加
+
+const playSoundFromPlaylist = (soundName) => {
+    // プレイリストからサウンドを取得
+    const playlist = game.playlists.getName("effect"); // プレイリストの名前を指定
+    if (playlist) {
+        const track = playlist.sounds.find(s => s.name === soundName);
+        if (track) {
+            // サウンドファイルのURLを取得
+            const soundUrl = track.path;
+            if (soundUrl) {
+                // サウンドを再生
+                new Audio(soundUrl).play();
+            } else {
+                console.log(`サウンド '${soundName}' のURLが取得できませんでした。`);
+            }
+        } else {
+            console.log(`サウンド '${soundName}' がプレイリストに見つかりませんでした。`);
+        }
+    } else {
+        console.log("指定されたプレイリストが見つかりませんでした。");
+    }
+};
+
+async function ResetCondition() {
+
+    const addFrenzyWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.checkfrenzy?.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して狂乱付与")
+            const halfhp = Math.floor(x.entity.system.attributes.hp.max / 2);
+            const beforeStack = x.entity.system.attributes.stackfrenzy.value;
+            if(x.entity.system.attributes.hp.value <= halfhp){
+                x.entity.modifyTokenAttribute('attributes.stackfrenzy', beforeStack + 1);
+                console.log(x.entity.name + "の狂乱が1増加しました。");
+            }
+            return x
+        })
+    }
+
+    const applyShinsyokuWhenTurnEnd = (characterList) => {
+        return characterList
+        .filter(x => x.entity.system.attributes.stackSinsyoku?.value>2)
+        .map(x => {
+            console.log(x.entity.name + "に対して侵食処理")
+            const shinsyokuDamage = x.entity.system.attributes.stackSinsyoku.value;
+            const beforeConst = x.entity.system.attributes.constitution.value;
+            x = applyDamage(x, shinsyokuDamage);
+            x.entity.modifyTokenAttribute('attributes.constitution', beforeConst - shinsyokuDamage );
+            return x;
+        })
+    }
+
+    const applyHealingToRandomPlayer = (characterList) => {
+        // isPlayerを持っているキャラクターをフィルタリング
+        const playerCharacters = characterList.filter(x => x.entity.system.attributes?.isPlayer);
+        const validPlayers = playerCharacters.filter(x => x.entity.system.attributes?.checkseikou?.value > 0);
+
+        if (validPlayers.length === 0) {
+            console.log("回復処理を行う有効なプレイヤーキャラクターがいません。");
+            return;
+        }
+
+        // ランダムに1人のプレイヤーを選択
+        const randomIndex = Math.floor(Math.random() * validPlayers.length);
+        const selectedCharacter = validPlayers[randomIndex];
+        console.log(selectedCharacter.entity.name + "のHPを回復します。");
+
+        // 回復量を指定
+        const healingAmount = Math.floor(Math.random() * 2) + 1; // 1-2回復する
+
+        applyHeal(selectedCharacter, healingAmount);
+
+        // 結果をコンソールに表示
+        console.log(selectedCharacter.entity.name + "のHPが" + healingAmount + "回復しました。");
+    }
+
+
+
+    const applyRegenWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackregen.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して再生処理")
+            const beforeStack = x.entity.system.attributes.stackregen.value;
+            x.entity.modifyTokenAttribute('attributes.stackregen', beforeStack - 1 );
+            return x
+        })
+    }
+
+    const applyemberWhenTurnEnd = (characterList) => {
+        // isPlayerを持っているキャラクターをフィルタリング
+        const playerCharacters = characterList.filter(x => x.entity.system.attributes.isPlayer);
+
+        return playerCharacters
+            .filter(x => x.entity.system.attributes.stackember.value > 0)
+            .map(x => {
+                console.log(x.entity.name + "に対して点火処理");
+                const beforeStack = x.entity.system.attributes.stackember.value;
+                x.entity.modifyTokenAttribute('attributes.stackBurned', beforeStack);
+                x.entity.modifyTokenAttribute('attributes.stackember', beforeStack - 1);
+
+                // 他のプレイヤーキャラクターにも火傷を付与する処理
+                playerCharacters
+                    .filter(y => y !== x)  // 自分以外のプレイヤーキャラクターに付与
+                    .forEach(y => {
+                        const burnedStack = y.entity.system.attributes.stackBurned.value || 0;
+                        console.log(y.entity.name + "に対して火傷付与処理");
+                        y.entity.modifyTokenAttribute('attributes.stackBurned', burnedStack + 1);
+                    });
+
+                return x;
+            });
+    }
+
+    
+    
+    const applyBindWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackbind.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して束縛処理")
+            x.entity.modifyTokenAttribute('attributes.stackbind', 0);
+            return x
+        })
+    }
+    
+    const applyNKWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes?.checknk?.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "が沈潜3増加")
+            const beforeStack = x.entity.system.attributes.stacksink.value;
+            x.entity.modifyTokenAttribute('attributes.stacksink', beforeStack + 2 );
+            return x
+        })
+    }
+    
+    const applySinkWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stacksink.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して沈潜処理")
+            const beforeStack = x.entity.system.attributes.stacksink.value;
+            //x.entity.modifyTokenAttribute('attributes.stacksink', beforeStack - 1 );
+            if(x.entity.system.attributes.checknk >= 1){
+                x.entity.modifyTokenAttribute('attributes.stacksink', beforeStack + 2 );
+                console.log(`Updated stacksink (checknk >= 1): ${beforeStack + 2}`);
+            }else{
+                x.entity.modifyTokenAttribute('attributes.stacksink', beforeStack - 1 );
+            }
+            return x
+        })
+    }
+    
+    const applyTremorWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stacktremor.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して振動処理")
+            const beforeStack = x.entity.system.attributes.stacktremor.value;
+            x = applyDamage(x, beforeStack);
+            x.entity.modifyTokenAttribute('attributes.stacktremor', Math.floor(beforeStack / 3 * 2));
+            return x
+        })
+    }
+    
+    const applyPoiseWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackpoise.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して呼吸処理")
+            const beforeStack = x.entity.system.attributes.stackpoise.value;
+            x.entity.modifyTokenAttribute('attributes.stackpoise', beforeStack - 1 );
+            return x
+        })
+    }
+    
+    const applyParalysisWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackParalysis.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して麻痺処理")
+            x.entity.modifyTokenAttribute('attributes.stackParalysis', 0);
+            return x
+        })
+    }
+    
+    
+    const applyFearWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackFear.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して恐怖処理")
+            x.entity.modifyTokenAttribute('attributes.stackFear', 0);
+            return x
+        })
+    }
+    
+    
+    const applyDamageDownWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackDamageDown.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対してダメージ減少処理")
+            x.entity.modifyTokenAttribute('attributes.stackDamageDown', 0);
+            return x
+        })
+    }
+    
+    
+    const applyVulnerableWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackVulnerable.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して脆弱処理")
+            x.entity.modifyTokenAttribute('attributes.stackVulnerable', 0);
+            return x
+        })
+    }
+    
+    
+    const applyPowerDownWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackPowerDown.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して威力減少処理")
+            x.entity.modifyTokenAttribute('attributes.stackPowerDown', 0);
+            return x
+        })
+    }
+    
+    
+    const applyDamageUpWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackDamageUp.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対してダメージ上昇処理")
+            x.entity.modifyTokenAttribute('attributes.stackDamageUp', 0);
+            return x
+        })
+    }
+    
+    
+    const applyProtectionWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackProtection.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して保護処理")
+            x.entity.modifyTokenAttribute('attributes.stackProtection', 0);
+            return x
+        })
+    }
+    
+    
+    const applyPowerUpWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackPowerUp.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対してパワー処理")
+            x.entity.modifyTokenAttribute('attributes.stackPowerUp', 0);
+            return x
+        })
+    }
+    
+    const applyBurnedWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackBurned.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対してやけど処理")
+            const beforeStack = x.entity.system.attributes.stackBurned.value;
+            x = applyDamage(x, beforeStack);
+            x.entity.modifyTokenAttribute('attributes.stackBurned', Math.floor(beforeStack / 3 * 2));
+            playSoundFromPlaylist('Effect Burn');
+            return x
+        })
+    }
+    
+    const applyPoisonWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackPoison.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して毒処理")
+            const beforeStack = x.entity.system.attributes.stackPoison.value;
+            applyDamage(x, beforeStack);
+            x.entity.modifyTokenAttribute('attributes.stackPoison', Math.floor(beforeStack / 2));
+            return x
+        })
+    }
+    
+    const applyBleedingWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.stackBleeding.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対して出血処理")
+            const beforeStack = x.entity.system.attributes.stackBleeding.value;
+            // じっとしていれば、出血ダメージは入らない
+            let twoThirds = (beforeStack*2) / 3 ;
+            let checkUp = Math.ceil(twoThirds);
+            if (checkUp === beforeStack){
+            checkUp -= 1;
+            }
+            console.log(checkUp);
+            x.entity.modifyTokenAttribute('attributes.stackBleeding', 
+            checkUp);
+            return x
+        })
+    }
+    
+    const eraseBarrierWhenTurnEnd = (characterList) => {
+        // List<gActor>
+        return characterList
+        .filter(x => x.entity.system.attributes.barrier.value > 0 )
+        .map(x => {
+            console.log(x.entity.name + "に対してバリア削除処理")
+            x.entity.modifyTokenAttribute('attributes.barrier', 0);
+            return x
+        })
+    }
+  
+
+    const getCharacterList = () => {
+        return canvas.tokens.controlAll()
+        .map(x => x.actor)
+        .filter(x => x.type === 'character')
+    // とりあえず出血ステータスがあるかどうかでプレイヤーか見分けることにする
+        .filter(x => !!x.system.attributes.stackBleeding)
+    }
+    
+    const applyDamage = (character, damage) => {
+        let hp = character.hp;
+        let barrier = character.barrier;
+
+        if (barrier > 0) {
+            const absorbed = Math.min(barrier, damage);
+            barrier -= absorbed;
+            damage -= absorbed;
+        }
+        if (damage > 0) {
+            hp -= damage;
+        }
+
+        // エンティティを直接変更せず、character.hp と character.barrier を更新
+        character.hp = hp;
+        character.barrier = barrier;
+
+        return character;
+    };
+
+
+    //再生用
+    const applyHeal = (character, heal) => {
+    let hp = character.hp;
+    const maxhp = character.hp.max;
+
+    hp += heal;
+    if(hp > maxhp) {
+    hp = maxhp;
+    }
+
+    character.hp = hp;
+    return character;
+    }
+    
+    const turnEnd = () => {
+    // List<gActor>
+        const characterList = getCharacterList().map(x => {return {
+            entity: x, 
+            hp: x.system.attributes.hp.value, 
+            barrier: x.system.attributes.barrier.value
+    }});
+    
+    
+      
+        // 順不同のはず
+        applyBleedingWhenTurnEnd(characterList);
+        applyBurnedWhenTurnEnd(characterList);
+        applyPoisonWhenTurnEnd(characterList);
+        applyPowerUpWhenTurnEnd(characterList);
+        applyProtectionWhenTurnEnd(characterList);
+        applyDamageUpWhenTurnEnd(characterList);
+        applyDamageDownWhenTurnEnd(characterList);
+        applyVulnerableWhenTurnEnd(characterList);
+        applyPowerDownWhenTurnEnd(characterList);
+        applyParalysisWhenTurnEnd(characterList);
+        applyFearWhenTurnEnd(characterList);
+        applyPoiseWhenTurnEnd(characterList);
+        applyTremorWhenTurnEnd(characterList);
+        applySinkWhenTurnEnd(characterList);
+        applyBindWhenTurnEnd(characterList);
+        applyRegenWhenTurnEnd(characterList);
+    	applyemberWhenTurnEnd(characterList);
+        applyHealingToRandomPlayer(characterList);
+        addFrenzyWhenTurnEnd(characterList);
+        applyNKWhenTurnEnd(characterList);
+        applyShinsyokuWhenTurnEnd(characterList);
+    
+        characterList.forEach(x => {
+            x.entity.modifyTokenAttribute('attributes.hp', x.hp);
+            x.entity.modifyTokenAttribute('attributes.barrier', x.barrier);
+        });
+    
+    
+    
+        // 更新系処理が非同期のため各状態異常処理でそれぞれ参照と更新を行うと、更新前の値を参照してきてしまい、最後の更新以外反映されない状態になる
+        characterList.map(x => {
+            const beforeHp = x.entity.system.attributes.hp.value;
+            x.entity.modifyTokenAttribute('attributes.hp', x.hp)
+        });
+        // バリア削除処理だけはHP処理反映の後に行う
+        // barrierのvalueは先にcharacterにコピーしているので、配慮不要の可能性あり
+        eraseBarrierWhenTurnEnd(characterList);
+    }
+    
+    turnEnd();
+    
+    
+    }
+    
+    
+    ResetCondition();
+
+if (game.combat) {
+    game.combat.nextRound();
+    ui.notifications.warn("ターン開始マクロを押してください");
+} else {
+    ui.notifications.warn("No active combat.");
+}

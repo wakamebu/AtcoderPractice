@@ -1,0 +1,64 @@
+{
+  "contest": {
+    "id": "awtf2024-open",
+    "title": "World Tour Finals 2024（Open Contest）",
+    "url": "https://atcoder.jp/contests/awtf2024-open"
+  },
+  "tasks": [
+    {
+      "id": "awtf2024_a",
+      "label": "A",
+      "title": "Moving Slimes",
+      "url": "https://atcoder.jp/contests/awtf2024-open/tasks/awtf2024_a",
+      "directory": {
+        "path": "a",
+        "testdir": "test",
+        "submit": "main.cpp"
+      }
+    },
+    {
+      "id": "awtf2024_b",
+      "label": "B",
+      "title": "01 Inversion Expected",
+      "url": "https://atcoder.jp/contests/awtf2024-open/tasks/awtf2024_b",
+      "directory": {
+        "path": "b",
+        "testdir": "test",
+        "submit": "main.cpp"
+      }
+    },
+    {
+      "id": "awtf2024_c",
+      "label": "C",
+      "title": "Fuel",
+      "url": "https://atcoder.jp/contests/awtf2024-open/tasks/awtf2024_c",
+      "directory": {
+        "path": "c",
+        "testdir": "test",
+        "submit": "main.cpp"
+      }
+    },
+    {
+      "id": "awtf2024_d",
+      "label": "D",
+      "title": "Almost Bubble Sort",
+      "url": "https://atcoder.jp/contests/awtf2024-open/tasks/awtf2024_d",
+      "directory": {
+        "path": "d",
+        "testdir": "test",
+        "submit": "main.cpp"
+      }
+    },
+    {
+      "id": "awtf2024_e",
+      "label": "E",
+      "title": "Colorful Stamps",
+      "url": "https://atcoder.jp/contests/awtf2024-open/tasks/awtf2024_e",
+      "directory": {
+        "path": "e",
+        "testdir": "test",
+        "submit": "main.cpp"
+      }
+    }
+  ]
+}

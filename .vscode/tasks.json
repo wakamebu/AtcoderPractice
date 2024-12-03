@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "c++ build for AtCoder",
+            "type": "shell",
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "command": "g++",
+            "args": [
+                "-I",
+                "${workspaceFolder}/ac-library/",
+                "-g",
+                "-std=c++20",
+                "-DONLINE_JUDGE",
+                "-O0",
+                "-Wall",
+                "-Wextra",
+                "-o",
+                "${workspaceFolder}/a.out",
+                "${file}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "isDefault": true,
+            "problemMatcher": []
+        }
+    ],
+    "group": "build"
+}

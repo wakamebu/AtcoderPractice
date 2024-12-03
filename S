@@ -1,0 +1,72 @@
+const debuffsAndBuffs = [
+    { key: 'stackDamageUp', name: 'ダメージ上昇' },
+    { key: 'stackPowerUp', name: '威力上昇' },
+    { key: 'stackpoise', name: '呼吸' },
+    { key: 'stackProtection', name: '保護' },
+    { key: 'stackbiribiri' , name: '充電'},
+    { key: 'stackammo' , name: '弾丸'},
+    { key: 'stackregen', name: '再生' },
+    { key: 'stackfrenzy', name: '狂乱' },
+    { key: 'stackdarkshield' , name: '怨嗟'},
+    { key: 'stackdarkEdge' , name: '無窮の闇'},
+    //ここからデバフ
+    { key: 'stackDamageDown', name: 'ダメージ減少' },
+    { key: 'stackPowerDown', name: '威力減少' },
+    { key: 'stackBurned', name: '火傷' },
+    { key: 'stackBleeding', name: '出血' },
+    { key: 'stackPoison', name: '毒' },
+    { key: 'stackFear', name: '恐怖' },
+    { key: 'stackParalysis', name: '麻痺' },
+    { key: 'stackVulnerable', name: '脆弱' },
+    { key: 'stacktremor', name: '振動' },
+    { key: 'stacksink', name: '沈潜' },
+    { key: 'stackbind', name: '束縛' },
+    { key: 'stackSinsyoku', name: '侵食' },
+    // 必要に応じてデバフ・バフを追加
+];
+
+const selectedTokens = canvas.tokens.controlled;
+
+if (selectedTokens.length === 0) {
+    ui.notifications.warn("対象のトークンを選択してください。");
+} else {
+    let overallMessage = "";
+
+    selectedTokens.forEach(token => {
+        const actor = token.actor;
+
+        if (!actor) {
+            console.warn(`トークン ${token.name} にアクターが関連付けられていません。`);
+            return;
+        }
+
+        const activeEffects = debuffsAndBuffs
+            .map(effect => {
+                const value = actor.system.attributes[effect.key]?.value;
+                return { name: effect.name, value: value ?? 0 };
+            })
+            .filter(effect => effect.value > 0);
+
+        if (activeEffects.length === 0) {
+            overallMessage += `<h2>名前：${actor.name}</h2><p>有効なデバフ・バフがありません。</p>`;
+            return;
+        }
+
+        let messageContent = `<h2>名前：${actor.name}</h2><ul>`;
+        activeEffects.forEach(effect => {
+            messageContent += `<li>${effect.name}: ${effect.value}</li>`;
+        });
+        messageContent += `</ul>`;
+
+        overallMessage += messageContent;
+    });
+
+    if (overallMessage !== "") {
+        ChatMessage.create({
+            content: overallMessage,
+            speaker: ChatMessage.getSpeaker({ user: game.user })
+        });
+    } else {
+        console.log("有効なデバフ・バフが選択されたトークンに存在しません。");
+    }
+}
